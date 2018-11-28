@@ -7,176 +7,23 @@ class MarketModel extends CI_Model {
 
 	public function __construct()    {
         parent::__construct();
-
         $this->db = $this->load->database('default', true);
         $this->load->driver('cache');
 
         #$this->profile = $this->cache->memcached->get('profile');
     }
 
-    //查询所有打开的市场
-    public function get_markets_open(){
-
-        $result = $this->cache->memcached->get('markets-open');
-
-        if( $result == null || empty($result)) {
-
-            $sql = "select 
-              p.Id, 
-              p.CashpoolCode,    
-              p.CompanyId,
-              p.CompanyDivision , 
-              p.MarketStatus, 
-              p.CurrencySign, 
-              p.CurrencyName, 
-              p.MiniAPR, 
-              p.ExpectAPR, 
-              p.NextPaydate, 
-              IFNULL(p.AutoAmount,0) as AvailableAmount ,
-              IFNULL(AvailableAmount, 0) as TotalAmount,
-              IFNULL(AllocateId,0) as AllocateId,
-              ReservePercent,
-              ReconciliationDate
-              from  `Customer_Cashpool` p                 
-              where p.MarketStatus = 1
-              ORDER BY p.NextPaydate ASC;";
-
-            $query = $this->db->query($sql);
-
-            $result = array();
-            $rst = $query->result_array();
-
-            foreach( $rst as $item){
-                $result[$item["CashpoolCode"]] = array(
-                    "id" => $item["Id"],
-                    "company_id" => $item["CompanyId"],
-                    "market_name" => $item["CompanyDivision"],
-                    "market_status" => $item["MarketStatus"],
-                    "currency_sign" => $item["CurrencySign"],
-                    "currency" => $item["CurrencyName"],
-                    "mini_apr" => $item["MiniAPR"],
-                    "expect_apr" => $item["ExpectAPR"],
-                    "paydate" => $item["NextPaydate"],
-                    "available_amount" => $item["AvailableAmount"],
-                    "total_amount" => $item["TotalAmount"],
-                    "allocate_id" => $item["AllocateId"],
-                    "reserve_percent" => $item["ReservePercent"],
-                    "reconciliation_date" => $item["ReconciliationDate"]
-                );
-            }
-
-            $this->cache->memcached->save( 'markets-open', $result, 360);
-
-        }
-        return $result;
+    public function init($profile){
+        $this->profile = $profile;
     }
 
-    //查询某市场
-    public function get_market_open_by_code($cashpoolCode){
-
-        $result = $this->cache->memcached->get('markets-open');
-
-        if( $result == null || empty($result)) {
-
-           $this->get_markets();
-
-            $result = $this->cache->memcached->get('markets-open');
-        }
-
-        return $result[$cashpoolCode];
-    }
-
-
-
-    //查询所有打开的市场
-    public function get_markets_close(){
-
-        $result = $this->cache->memcached->get('markets-close');
-
-        if( $result == null || empty($result)) {
-
-            $sql = "select 
-              p.Id, 
-              p.CashpoolCode,    
-              p.CompanyId,
-              p.CompanyDivision , 
-              p.MarketStatus, 
-              p.CurrencySign, 
-              p.CurrencyName, 
-              p.MiniAPR, 
-              p.ExpectAPR, 
-              p.NextPaydate, 
-              IFNULL(p.AutoAmount,0) as AvailableAmount ,
-              IFNULL(AvailableAmount, 0) as TotalAmount,
-              IFNULL(AllocateId,0) as AllocateId,
-              ReservePercent,
-              ReconciliationDate
-              from  `Customer_Cashpool` p                 
-              where p.MarketStatus in ( 0 , -1)
-              ORDER BY p.NextPaydate ASC;";
-
-            $query = $this->db->query($sql);
-
-            $result = array();
-            $rst = $query->result_array();
-
-            foreach( $rst as $item){
-                $result[$item["CashpoolCode"]] = array(
-                    "id" => $item["Id"],
-                    "company_id" => $item["CompanyId"],
-                    "market_name" => $item["CompanyDivision"],
-                    "market_status" => $item["MarketStatus"],
-                    "currency_sign" => $item["CurrencySign"],
-                    "currency" => $item["CurrencyName"],
-                    "mini_apr" => $item["MiniAPR"],
-                    "expect_apr" => $item["ExpectAPR"],
-                    "paydate" => $item["NextPaydate"],
-                    "available_amount" => $item["AvailableAmount"],
-                    "total_amount" => $item["TotalAmount"],
-                    "allocate_id" => $item["AllocateId"],
-                    "reserve_percent" => $item["ReservePercent"],
-                    "reconciliation_date" => $item["ReconciliationDate"]
-                );
-            }
-
-            $this->cache->memcached->save( 'markets-close', $result, 360);
-
-        }
-        return $result;
-    }
-
-    //查询某市场
-    public function get_market_close_by_code($cashpoolCode){
-
-        $result = $this->cache->memcached->get('markets-close');
-
-        if( $result == null || empty($result)) {
-
-            $this->get_markets();
-
-            $result = $this->cache->memcached->get('markets-close');
-        }
-
-        return $result[$cashpoolCode];
-    }
-
-
-
-    public function get_service_time(){
-
-        $result = $this->cache->memcached->get('service-time');
-
-        if( $result == null || empty($result)) {
-
-            $sql = "select StartTime as starttime, EndTime as endtime  
+    public function getMarketServiceTime(){
+        $sql = "select StartTime,EndTime 
               from Customer_Cashpool_Service where `ServiceStatus` = 1;";
 
-            $query = $this->db->query($sql);
+        $query = $this->db->query($sql);
 
-            $result = $query->row_array();
-
-            $this->cache->memcached->save( 'service-time', $result, 3600);
-        }
+        $result = $query ->row_array();
 
         return $result;
     }
@@ -205,6 +52,7 @@ class MarketModel extends CI_Model {
                 foreach ($result as $row) {
                     $market = array();
 
+
                     $cashpoolId = $row["Id"];
                     $market["market_id"] = $row['CashpoolCode'];
                     $market["market_status"] = intval($row['MarketStatus']);
@@ -217,6 +65,7 @@ class MarketModel extends CI_Model {
                     $market['paydate'] = isset($row['NextPaydate']) && $row['NextPaydate'] != null ? $row['NextPaydate'] : '-';
                     $market['cash_total'] = $row['TotalAmount'];
                     $market['cash_available'] = $row['AvaAmount'];
+
 
                     $stat = $this->getMarketStat( $row );       //获得市场当日的清算统计
 
@@ -346,6 +195,121 @@ class MarketModel extends CI_Model {
 
     }
 
+    public function getMarketStat($_market){
+
+        //print_r($this->db->last_query()); die;
+        $market = array();
+
+        if(isset($_market) && $_market != null && is_array($_market) ) {
+
+            $paydate = $_market['NextPaydate'];
+
+            $market['currency'] = $_market['CurrencyName'];
+            $market['currency_sign'] = $_market['CurrencySign'];
+
+            $market['total'] = array(
+                'available_amount' => 0,
+                'discount_amount' => 0,
+                'average_dpe'=> 0 ,
+                'average_apr'=> 0
+                );
+
+            $market['nonclearing'] = array(
+                'available_amount'=> 0,
+                'discount_amount' => 0,
+                'average_dpe'=> 0,
+                'average_apr'=> 0,
+                'list' => array()
+            );
+
+            $market['clearing'] = array(
+                'available_amount'=> 0,
+                'discount_amount' => 0,
+                'average_dpe'=> 0,
+                'average_apr'=> 0,
+                'list' => array()
+            );
+
+
+            if($paydate == null || empty($paydate))
+            {
+                $paydate = date("Y-m-d", time()+3600);
+                $market['market_status'] = -1;
+
+            }else{
+
+                $market['market_status'] = $_market['MarketStatus'];
+
+            }
+
+            /*
+             * 这一段代码主要是处理有效的供应商发票的预成交统计
+             */
+            $offers = $this->get_offers($_market["Id"]);
+            $invoices = $this->get_invoice( $_market["CashpoolCode"] , $paydate );
+            $awards = $this->get_awards($_market["Id"]);
+
+            foreach ($offers as $key => $item) {
+
+                foreach ($invoices as $inv) {
+
+                    if ($key == $inv["Vendorcode"]) {
+
+                        $market['total']["average_dpe"] += $inv["Dpe"];
+
+                        if (isset( $awards[$inv["Id"]])) {
+
+                            $market['clearing']["list"][] = array( 'dpe' => $inv["Dpe"], 'discount'=> $awards[$inv["Id"]]["discount"]);
+                            $market['clearing']["average_dpe"] += $inv["Dpe"];
+                            $market['clearing']["available_amount"] += $inv["InvoiceAmount"];
+                            $market['clearing']["discount_amount"] += $awards[$inv["Id"]]["discount"];
+
+                        } else {
+
+                            $discount = round($inv["InvoiceAmount"] * $inv["Dpe"] * floatval($item["offerAPR"])/365/100  ,2 );
+
+                            $market['nonclearing']["list"][] = array( 'dpe' => $inv["Dpe"], 'discount'=> $discount);
+                            $market['nonclearing']["average_dpe"] += $inv["Dpe"];
+                            $market['nonclearing']["available_amount"] += $inv["InvoiceAmount"];
+                            $market['nonclearing']["discount_amount"] += $discount;
+;
+                        }
+                    }
+                }
+            }
+
+
+            $market['total']["available_amount"] = $market['clearing']["available_amount"] + $market['nonclearing']["available_amount"];
+            $market['total']["discount_amount"] = $market['clearing']["discount_amount"] + $market['nonclearing']["discount_amount"];
+
+            $market['clearing']["average_dpe"] = count($market['clearing']["list"]) > 0 ? round( $market['clearing']["average_dpe"] /count($market['clearing']["list"]),1 ) : 0 ;
+            $market['nonclearing']["average_dpe"] = count($market['nonclearing']["list"]) > 0 ? round( $market['nonclearing']["average_dpe"] /count($market['nonclearing']["list"]),1 ) : 0 ;
+
+
+            $market['total']["average_dpe"] = count($market['nonclearing']["list"]) > 0 || count($market['clearing']["list"]) > 0 ?
+                round(   $market['total']["average_dpe"]  / (count($market['nonclearing']["list"]) + count($market['clearing']["list"]) ), 1) : 0 ;
+
+            $avg_apr = 0;
+
+            foreach( $market['clearing']["list"] as $val)
+            {
+                $market["clearing"]["average_apr"] += round($val['discount']/$val['dpe']*365*100/ $market['clearing']["available_amount"], 2);
+                $avg_apr  += round($val['discount']/$val['dpe']*365*100/ $market['total']["available_amount"], 2);
+            }
+
+            foreach( $market['nonclearing']["list"] as $val)
+            {
+                $market["nonclearing"]["average_apr"] += round($val['discount']/$val['dpe']*365*100/ $market['nonclearing']["available_amount"], 2);
+                $avg_apr  += round($val['discount']/$val['dpe']*365*100/ $market['total']["available_amount"], 2);
+            }
+
+            $market['total']["average_apr"] = $avg_apr;
+
+        }
+
+        return $market;
+
+    }
 
     public function getCurrentMarketGraph($marketid){
 
@@ -395,6 +359,142 @@ class MarketModel extends CI_Model {
 
     }
 
+    public function getCurrentMarketStat($marketid){
+
+
+        $result =  $this->getMarketStatusByCode($marketid)  ;
+
+        $market = array();
+
+        $market['currency'] = $result['CurrencyName'];
+        $market['currency_sign'] = $result['CurrencySign'];
+        $paydate = $result ["NextPaydate"];
+        $cashpoolId = $result["Id"];
+
+        $sql = "SELECT   sum(a.PayAmount) as amount, sum(a.PayDiscount) as discount, avg(a.PayDpe) as dpe,
+                      sum(CASE WHEN a.IsManual = 1 then 0 ELSE a.PayAmount END) as c_amount ,
+                      sum(CASE WHEN a.IsManual = 1 then 0 ELSE a.PayDiscount END) as c_discount, 
+                      avg(CASE WHEN a.IsManual = 1 then 0 ELSE a.PayDpe END) as c_dpe,
+                      sum(CASE WHEN a.IsManual = 1 then a.PayAmount ELSE 0  END) as m_amount ,
+                      sum(CASE WHEN a.IsManual = 1 then a.PayDiscount ELSE 0 END) as m_discount, 
+                      avg(CASE WHEN a.IsManual = 1 then a.PayDpe ELSE  0 END) as m_dpe
+                    FROM `Customer_PayAwards` a      
+                    where a.CashpoolCode = '{$marketid}'      
+                    and a.AwardStatus = 0 and a.AwardDate = '".date("Y-m-d", time())."'
+                ";
+
+        $query = $this->db->query($sql);
+
+        $discount = array();
+
+        if($query->num_rows() >0 ) {
+            $row = $query->row_array();
+
+                if ($row['amount'] != null && $row['amount'] > 0) {
+                    $discount['total'] = array(
+                        'discount_amount' => $row['discount'],
+                        'average_dpe' => round($row['dpe'],1),
+                        'average_apr' => round($row['discount'] / $row['dpe'] * 365 * 100 / $row['amount'], 2)
+                    );
+                }else{
+                    $discount['total'] = array(
+                        'discount_amount' => 0,
+                        'average_dpe' => 0,
+                        'average_apr' => 0
+                    );
+                }
+
+                if ($row['m_amount'] != null && $row['m_amount'] > 0) {
+                    $discount['manual'] = array(
+                        'discount_amount' => $row['m_discount'],
+                        'average_dpe' => round($row['m_dpe'],1),
+                        'average_apr' => round($row['m_discount'] / $row['m_dpe'] * 365 * 100 / $row['m_amount'], 2)
+                    );
+                }else{
+                    $discount['manual'] = array(
+                        'discount_amount' => 0,
+                        'average_dpe' => 0,
+                        'average_apr' => 0
+                    );
+                }
+
+                if ($row['c_amount'] != null && $row['c_amount'] > 0) {
+                    $discount['clearing'] = array(
+                        'discount_amount' => $row['c_discount'],
+                        'average_dpe' => round($row['c_dpe'],1),
+                        'average_apr' => round($row['c_discount'] / $row['c_dpe'] * 365 * 100 / $row['c_amount'], 2)
+                    );
+                }else{
+                    $discount['clearing'] = array(
+                        'discount_amount' => 0,
+                        'average_dpe' => 0,
+                        'average_apr' => 0
+                    );
+                }
+
+
+        }
+
+        $market['discount'] = $discount;
+
+
+        $amount = array();
+
+
+        $sql = "SELECT COUNT(DISTINCT i.Vendorcode) as supplier , count(o.Id) as invoice, sum(o.PayAmount) as amount
+                FROM `Customer_PayAwards` o   
+                inner join `Customer_Payments` i ON i.Id = o.InvoiceId               
+                where o.CashpoolCode = '{$marketid}' AND o.AwardStatus >= 0   and o.AwardDate = '".date("Y-m-d", time())."' ;
+                ";
+
+        $query = $this->db->query($sql);
+
+
+        $ret = $query->row_array();
+
+        $amount['total'] = array(
+            'available_amount' => isset($ret['amount']) ? $ret['amount'] : 0 ,
+            'supplier_count' => isset($ret['supplier']) ? $ret['supplier'] : 0 ,
+            'invoice_count' => isset($ret['invoice']) ? $ret['invoice'] : 0
+        );
+
+
+        $sql = "SELECT COUNT(DISTINCT o.Vendorcode) as supplier , count(o.Id) as invoice, sum(o.PayAmount) as amount
+                FROM `Customer_PayAwards` o 
+                where o.CashpoolCode = '{$marketid}' and o.AwardStatus >= 0 and o.AwardDate =  '".date("Y-m-d", time())."';
+                ";
+
+        $query = $this->db->query($sql);
+
+
+        $amount['current'] = array(
+            'available_amount' => isset($ret['amount']) ? $ret['amount'] : 0 ,
+            'supplier_count' => isset($ret['supplier']) ? $ret['supplier'] : 0 ,
+            'invoice_count' => isset($ret['invoice']) ? $ret['invoice'] : 0
+        );
+
+        $sql = "SELECT COUNT(DISTINCT i.Vendorcode) as supplier , count(i.Id) as invoice, sum(i.InvoiceAmount) as amount
+                FROM  `Customer_Payments` i 
+                INNER JOIN `Supplier_Bids` b ON b.Vendorcode = i.Vendorcode and b.BidStatus >=0 and b.BidRate > 0 and b.CashpoolId = '{$cashpoolId}'
+                left join `Customer_PayAwards` a ON a.InvoiceId = i.Id AND a.AwardStatus >= 0 and a.AwardDate = '".date("Y-m-d", time())."'
+                where i.IsIncluded = 1 and i.InvoiceStatus = 1 and  i.CashpoolCode = '{$marketid}' and i.EstPaydate > '{$paydate}' 
+                and a.Id IS NULL  ;
+                ";
+
+        $query = $this->db->query($sql);
+
+        $ret = $query->row_array();
+
+        $amount['pending'] = array(
+            'available_amount' =>   $result["AutoAmount"] - $amount['current']['available_amount'] + $discount['total']['discount_amount'],
+            'supplier_count' => isset($ret['supplier']) ? $ret['supplier'] : 0,
+            'invoice_count' => isset($ret['invoice']) ? $ret['invoice'] : 0
+        );
+
+        $market['available_amount'] = $amount;
+
+        return $market;
+    }
 
     public function getMarketSupplierStat($marketid){
 
@@ -596,6 +696,12 @@ class MarketModel extends CI_Model {
         return $market;
     }
 
+    private function get_uuid(){
+        $query = $this->db->query("select UUID_SHORT() as uId");
+        $result = $query->row_array();
+        return $result["uId"];
+    }
+
     public function  setMarketSetting($marketid, $setting)
     {
 
@@ -613,18 +719,88 @@ class MarketModel extends CI_Model {
 
                 $sql = "";
 
+
                 $sql .= "ExpectAPR = {$setting["expect_apr"]}" ;
                 $sql .= ",MiniAPR = {$setting["min_apr"]}" ;
                 $sql .= ",ReservePercent = {$setting["reserve_percentage"]}" ;
                 $sql .= ",ReconciliationDate = '{$setting["reconcilation_date"]}'" ;
-                
+
+                $cash = floatval($market["AvailableAmount"]);
+
+				$update_sql = "";                
+				$insert_sql = "";
+				
+                if ( isset( $setting["market_cash"]) && !empty($setting["market_cash"]) && floatval($setting["market_cash"]) != floatval($market["AutoAmount"]) )
+                {
+                    $uuid  = $this->get_uuid();
+
+                    $cash = $cash  + floatval($setting["market_cash"]) - floatval($market["AutoAmount"]);
+
+                    $sql .= ",AutoAmount = {$setting["market_cash"]}" ;
+                    $sql .= ",AvailableAmount = {$cash} ";
+                    $sql .= ",AllocateId = {$uuid} " ;
+
+
+                    $update_sql = "UPDATE `Customer_Cashpool_Allocate`  SET AllocateStatus = -1,LastUpdateTime= NOW()
+                              WHERE Id = '{$market["AllocateId"]}' ; ";
+							  
+					$insert_sql = "INSERT INTO Customer_Cashpool_Allocate(Id, CreateTime,CreateUser,CashpoolCode,AllocateStatus,AllocateAmount,AllocateDate,PreAllocateId) \n
+						  SELECT {$uuid}, NOW(), '{$this->profile["email"]}',CashpoolCode, 1 , {$cash}, AllocateDate,Id FROM  Customer_Cashpool_Allocate \n  
+                          WHERE Id = '{$market["AllocateId"]}'; ";
+							
+							
+                }
+
+                if (
+                    (isset( $setting["market_cash"]) && !empty($setting["market_cash"]) && floatval($setting["market_cash"]) != floatval($market["AutoAmount"]) )
+                    ||
+                    (isset( $setting["reserve_percentage"]) && !empty($setting["reserve_percentage"]) && floatval($setting["reserve_percentage"]) != floatval($market["ReservePercent"]))
+                ) {
+                    $remainCash = round($cash * $setting["reserve_percentage"]/100, 2);
+                    $sql .= ",ManualAmount = {$remainCash} ";
+                }
+
                 if( strlen($sql) > 5) {
 
-                    $sql = "UPDATE `Customer_Cashpool` \n
-                      SET {$sql}                      
-                      WHERE Id = '{$market["Id"]}' ; ";
+                    $this->db->trans_strict(FALSE);
+                    $this->db->trans_begin();
 
-                    $this->db->query($sql);
+                    try{
+
+
+                        $sql = "UPDATE `Customer_Cashpool` \n
+                        SET {$sql}                      
+                        WHERE Id = '{$market["Id"]}' ; ";
+
+                        $result = $this->db->query($sql);
+
+                        if( $result && strlen($update_sql) > 5 ) {
+                            $result = $this->db->query($update_sql);
+							
+							if( $result){
+								$result = $this->db->query($insert_sql);
+							}
+							
+                        }
+
+                        if( $result) {
+                            $this->db->trans_commit();
+                        }else{
+                            $this->db->trans_rollback();
+                        }
+
+                    }catch(Exception $ex){
+
+                        $this->db->trans_rollback();
+
+                    }finally{
+
+
+                        $this->db->close();
+                        return $result;
+                    }
+
+
 
                 }
 
