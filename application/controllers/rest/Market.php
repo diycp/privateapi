@@ -476,11 +476,10 @@ class Market extends REST_Controller {
 
         if(isset($market_id) && !empty($market_id) ){
 
-            $market = $this->Marketmodel->getMarketStatusByCode($market_id);
-
+            //$market = $this->Marketmodel->getMarketStatusByCode($market_id);
             $this->set_response([
                 'code' => 1,
-                'data' => $this->Marketmodel->getMarketStat($market)
+                'data' => $this->Marketmodel->getMarketStat($market_id)
             ], REST_Controller::HTTP_OK);
 
         }else{
@@ -534,6 +533,7 @@ class Market extends REST_Controller {
         }
 
     }
+
 
     public function get_market_supplier_stat_get(){
         $market_id = $this->get("market_id");

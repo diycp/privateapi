@@ -34,26 +34,49 @@ class MarketModel extends CI_Model {
 
             $markets = array();
 
-            $sql = "select p.Id, p.CashpoolCode, c.companyname, p.CompanyDivision , p.MarketStatus, p.CurrencySign, p.CurrencyName, p.MiniAPR, p.ExpectAPR, p.NextPaydate
-              , IFNULL(p.AutoAmount,0) as AvaAmount  ,IFNULL(AvailableAmount, 0) as TotalAmount
-                from  `Customer_Cashpool` p 
-                inner join `Base_Companys` c ON c.Id = p.CompanyId
-                where p.MarketStatus >= 0
-                ORDER BY `c`.`CreateTime` ASC
-            ";
+            $sql = "SELECT
+                        p.Id,
+                        p.CashpoolCode,
+                        c.companyname,
+                        p.CompanyDivision,
+                        p.MarketStatus,
+                        p.CurrencySign,
+                        p.CurrencyName,
+                        p.MiniAPR,
+                        p.ExpectAPR,
+                        p.NextPaydate,
+                        IFNULL(p.AutoAmount, 0) AS AvaAmount,
+                        IFNULL(AvailableAmount, 0) AS TotalAmount,
+                        s.TotalAmount,
+                        s.ValidAmount,
+                        s.PayAmount,
+                        s.PayDiscount,
+                        s.AvgDpe,
+                        s.AvgAPR,
+                        s.CashpoolStatus
+                    FROM
+                        `Customer_Cashpool` p
+                    INNER JOIN `Base_Companys` c ON c.Id = p.CompanyId
+                    LEFT JOIN `stat_current_cashpools` s ON s.CashpoolCode=p.CashpoolCode
+                    WHERE
+                        p.MarketStatus >= 0
+                    ORDER BY
+                        `c`.`CreateTime` ASC
+                                ";
 
             $query = $this->db->query($sql);
+
 
             //print_r($this->db->last_query()); die;
 
             if ($query->num_rows() > 0) {
                 $result = $query->result_array();
-
+                $CashpoolCodeList = "";
                 foreach ($result as $row) {
                     $market = array();
 
 
-                    $cashpoolId = $row["Id"];
+                    //$cashpoolId = $row["Id"];
                     $market["market_id"] = $row['CashpoolCode'];
                     $market["market_status"] = intval($row['MarketStatus']);
                     $market["market_name"] = $row['CompanyDivision'];
@@ -67,7 +90,8 @@ class MarketModel extends CI_Model {
                     $market['cash_available'] = $row['AvaAmount'];
 
 
-                    $stat = $this->getMarketStat( $row );       //获得市场当日的清算统计
+
+                    /*$stat = $this->getMarketStat( $row );       //获得市场当日的清算统计
 
                     $market['paid_total'] = $stat['total']['available_amount'];          //需要支付的发票金额
                     $market['paid_eligible'] = $stat['total']['available_amount'];       //有效清算的发票金额
@@ -76,7 +100,14 @@ class MarketModel extends CI_Model {
                     $market['average_apr'] = $stat['clearing']['average_apr'];         //当日资金清算获得的平均年化率
                     $market['average_dpe'] = $stat['clearing']['average_dpe'];         //当日资金清算发票的平均早付天数
 
-                    $market["market_status"] = $stat['total']['available_amount'] > 0 ? $market["market_status"] : -1;
+                    $market["market_status"] = $stat['total']['available_amount'] > 0 ? $market["market_status"] : -1;*/
+                    $market['paid_total'] = floatval($row['TotalAmount']);
+                    $market['paid_eligible'] = floatval($row['ValidAmount']);
+                    $market['cash_deployed'] = floatval($row['PayAmount']);
+                    $market['income'] = floatval($row['PayDiscount']);
+                    $market['average_apr'] = floatval($row['AvgAPR']);
+                    $market['average_dpe'] = floatval($row['AvgDpe']);
+                    $market['market_status'] = intval($row['CashpoolStatus']);
                     $markets[] = $market;
                 }
 
@@ -194,8 +225,49 @@ class MarketModel extends CI_Model {
         return $awards;
 
     }
+    public function getMarketStat($_market_id)
+    {
+        $market = array();
+        $row = $this->db->query("select 
+                        CurrencySign,
+                        Currency,
+                        TotalAmount,
+                        ValidAmount,
+                        PayAmount,
+                        PayDiscount,
+                        AvgDpe,
+                        AvgAPR,
+                        CashpoolStatus
+                        from `stat_current_cashpools` where CashpoolCode='$_market_id'  limit 1")->row_array();
+        if(!isset($row)) return $market;
+        $market["currency"] = strval($row["Currency"]);
+        $market["currency_sign"] = strval($row["CurrencySign"]);
+        $market['total'] = array(
+            'available_amount' => floatval($row["TotalAmount"]),
+            'discount_amount' => floatval($row["PayDiscount"]),
+            'average_dpe'=> floatval($row["AvgDpe"]),
+            'average_apr'=> floatval($row["AvgAPR"])
+        );
 
-    public function getMarketStat($_market){
+        $market['nonclearing'] = array(
+            'available_amount'=> 0,
+            'discount_amount' => 0,
+            'average_dpe'=> 0,
+            'average_apr'=> 0,
+            'list' => array()
+        );
+
+        $market['clearing'] = array(
+            'available_amount' => floatval($row["TotalAmount"]),
+            'discount_amount' => floatval($row["PayDiscount"]),
+            'average_dpe'=> floatval($row["AvgDpe"]),
+            'average_apr'=> floatval($row["AvgAPR"]),
+            'list' => array()
+        );
+        $market["market_status"] = intval($row["CashpoolStatus"]);
+        return $market;
+    }
+    /*public function getMarketStat($_market){
 
         //print_r($this->db->last_query()); die;
         $market = array();
@@ -242,9 +314,9 @@ class MarketModel extends CI_Model {
 
             }
 
-            /*
-             * 这一段代码主要是处理有效的供应商发票的预成交统计
-             */
+
+              //这一段代码主要是处理有效的供应商发票的预成交统计
+
             $offers = $this->get_offers($_market["Id"]);
             $invoices = $this->get_invoice( $_market["CashpoolCode"] , $paydate );
             $awards = $this->get_awards($_market["Id"]);
@@ -309,7 +381,7 @@ class MarketModel extends CI_Model {
 
         return $market;
 
-    }
+    }*/
 
     public function getCurrentMarketGraph($marketid){
 
@@ -358,11 +430,77 @@ class MarketModel extends CI_Model {
         return $query->row_array();
 
     }
-
     public function getCurrentMarketStat($marketid){
+        //$result =  $this->getMarketStatusByCode($marketid);
+        //$market = array();
+        //$market['currency'] = $result['CurrencyName'];
+        //$market['currency_sign'] = $result['CurrencySign'];
+        //$paydate = $result ["NextPaydate"];
+        //$cashpoolId = $result["Id"];
+
+        $sql = "SELECT
+	                Currency,
+	                CurrencySign,
+                    PayDiscount,
+                    AvgDpe,
+                    AvgAPR,
+                    ValidAmount,
+                    ValidVendorCount,
+                    ValidInvoiceCount,
+                    PayAmount,
+                    PayVendorCount,
+                    PayInvoiceCount,
+                    NoPayAmount,
+                    NoPayVendorCount,
+                    NoPayInvoiceCount
+                FROM
+                    stat_current_cashpools where CashpoolCode = '$marketid' LIMIT 1";
+        $result = $this->db->query($sql)->row_array();
+        $market['currency'] = strval($result['Currency']);
+        $market['currency_sign'] = strval($result['CurrencySign']);
+        //$market_tmp = $market_tmp?$market_tmp:array();
+        $market["discount"] = array(
+            "total"=> array(
+                "discount_amount"=>floatval($result["PayDiscount"]),
+                "average_dpe"=>floatval($result["AvgDpe"]),
+                "average_apr"=>floatval($result["AvgAPR"])
+            ),
+            //manuak暂时没有
+            "manual"=> array(
+                "discount_amount"=> 0,
+                "average_dpe"=> 0,
+                "average_apr"=> 0
+            ),
+            //clearing=total
+            "clearing"=>array(
+                "discount_amount"=> floatval($result["PayDiscount"]),
+                "average_dpe"=> floatval($result["AvgDpe"]),
+                "average_apr"=> floatval($result["AvgDpe"])
+            )
+        );
+        $market["available_amount"] = array(
+            "total"=>array(
+                "available_amount"=>floatval($result["ValidAmount"]),
+                "supplier_count"=>intval($result["ValidVendorCount"]),
+                "invoice_count"=>intval($result["ValidInvoiceCount"])
+            ),
+            "current"=>array(
+                "available_amount"=>floatval($result["PayAmount"]),
+                "supplier_count"=>intval($result["PayVendorCount"]),
+                "invoice_count"=>intval($result["PayInvoiceCount"])
+            ),
+            "pending"=>array(
+                "available_amount"=>floatval($result["NoPayAmount"]),
+                "supplier_count"=>intval($result["NoPayVendorCount"]),
+                "invoice_count"=>intval($result["NoPayInvoiceCount"])
+            )
+        );
+        return $market;
+    }
+    /*public function getCurrentMarketStat($marketid){
 
 
-        $result =  $this->getMarketStatusByCode($marketid)  ;
+        $result =  $this->getMarketStatusByCode($marketid);
 
         $market = array();
 
@@ -494,7 +632,7 @@ class MarketModel extends CI_Model {
         $market['available_amount'] = $amount;
 
         return $market;
-    }
+    }*/
 
     public function getMarketSupplierStat($marketid){
 
