@@ -126,7 +126,7 @@ class MarketModel extends CI_Model {
         $sql = "UPDATE `Customer_Cashpool` SET MarketStatus = '{$active_status}' WHERE CashpoolCode = '{$marketid}';";
 
         $this->db->query($sql);
-        
+
 
         if (!$this->db->affected_rows()) {
             $this->db->trans_rollback();

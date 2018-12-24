@@ -427,7 +427,8 @@ abstract class REST_Controller extends CI_Controller {
     public function __construct($config = 'rest')
     {
         parent::__construct();
-
+        $this->load->model('UserActiveLog');
+        $this->UserActiveLog->beginLog($this);//开始写日志
         $this->_access_token = $this->input->get_post('access_token', TRUE);
         $this->_openid = $this->input->get_post('openid', TRUE);
 
@@ -659,11 +660,9 @@ abstract class REST_Controller extends CI_Controller {
     }
 
     private function checkAccessToken($access_token, $openid) {
-
         $this->load->model('oauth2/OAuth');
 
         $ret = $this->OAuth->getAccessToken($access_token, $openid);
-
         if (false === $ret || empty($ret['user_id']) || $ret['expires'] < time()) {
             // Display an error response
             $this->response([
@@ -900,6 +899,7 @@ abstract class REST_Controller extends CI_Controller {
      */
     public function response($data = NULL, $http_code = NULL, $continue = FALSE)
     {
+        $this->UserActiveLog->endLog($this);//写日志
         //if profiling enabled then print profiling data
 		$isProfilingEnabled = $this->config->item('enable_profiling');
 		if(!$isProfilingEnabled){
@@ -970,17 +970,20 @@ abstract class REST_Controller extends CI_Controller {
         	{
             	// Display the data and exit execution
             	$this->output->_display();
+                $this->UserActiveLog->outLog($this);
             	exit;
         	}
         	else
         	{
             	ob_end_flush();
+                $this->UserActiveLog->outLog($this,$data);
         	}
 
         	// Otherwise dump the output automatically
 		}
 		else{
 			echo json_encode($data);
+            $this->UserActiveLog->outLog($this,$data);
 		}
     }
 
