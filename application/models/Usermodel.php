@@ -68,18 +68,13 @@ class UserModel extends CI_Model {
                 limit 1; ";
 
 
-		$query = $this->db->query($sql);
+		    $query = $this->db->query($sql);
 		
-		//print_r($this->db->last_query()); die;
-		
-		if($query->num_rows() >0 )
-		{
-            $result = $query->row_array();
+            $result = $query->first_row('array');
+            
 			return $result;
 			
-		}
 		
-        return $result;
 
 	}    
     
