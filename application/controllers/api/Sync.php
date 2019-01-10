@@ -7,7 +7,7 @@ require APPPATH . 'libraries/BaseController.php';
 class Sync extends BaseController {
 
     public function index() {
-        echo 'sync';
+        return;
     }
 
     public function suppliersids() {
@@ -58,7 +58,7 @@ class Sync extends BaseController {
                 $create_user = 'API';
                 foreach($this->post as $post) {
                     if (! array_key_exists(trim($post['book_code']),$this->book)) {
-                        echo json_encode(array('code'=>-1,'msg'=>'pool_code:' + $post['book_code'] + ' not exist!'));
+                        echo json_encode(array('code'=>-1,'msg'=>'book_code:' + $post['book_code'] + ' not exist!'));
                         return;
                     }
                     $cash_pool_code = $this->book[trim($post['book_code'])]['CashpoolCode'];
@@ -78,7 +78,7 @@ class Sync extends BaseController {
                     if ($this->Until->exeSql($sql_arr)) {
                         echo json_encode(array('code'=>1,'msg'=>'success'));
                     } else {
-                        echo json_encode(array('code'=>-1,'msg'=>'exe sql fails'));
+                        echo json_encode(array('code'=>-1,'msg'=>'fails'));
                     }
                 } else {
                     echo json_encode(array('code'=>-1,'msg'=>'no sql'));
@@ -104,15 +104,16 @@ class Sync extends BaseController {
                 $invoice_no     = $post['invoice_no'];
                 $invoice_amount = $post['invoice_amount'];
                 $invoice_date   = $post['invoice_date']; 
+                $payment_days   = $post['payment_days'];
                 $estPaydate     = $post['estPaydate'];
                 //$invoce_status  = 1;//default 1
                 $client_status  = $post['status'];
                 //$isincluded     = 1;//default 1
                 if (isset($post['id'])) {
                     $id = $post['id'];
-                    $sql_arr[] = "UPDATE Customer_Payments SET CashpoolCode='{$cash_pool_code}',Vendorcode='{$vendorcode}',InvoiceNo='{$invoice_no}',InvoiceAmount={$invoice_amount},InvoiceDate='{$invoice_date}',EstPaydate='{$estPaydate}',client_status={$client_status} WHERE Id={$id}";
+                    $sql_arr[] = "UPDATE Customer_Payments SET CashpoolCode='{$cash_pool_code}',Vendorcode='{$vendorcode}',InvoiceNo='{$invoice_no}',InvoiceAmount={$invoice_amount},InvoiceDate='{$invoice_date}',payment_days='{$payment_days}',EstPaydate='{$estPaydate}',client_status={$client_status} WHERE Id={$id}";
                 } else {
-                    $sql_arr[] = "INSERT INTO Customer_Payments(Id,CreateUser,CashpoolCode,Vendorcode,InvoiceNo,InvoiceAmount,InvoiceDate,EstPaydate,client_status)VALUES(uuid_short(),'{$createUser}','{$cash_pool_code}','{$vendorcode}','{$invoice_no}',$invoice_amount,'{$invoice_date}','{$estPaydate}',{$client_status});";    
+                    $sql_arr[] = "INSERT INTO Customer_Payments(Id,CreateUser,CashpoolCode,Vendorcode,InvoiceNo,InvoiceAmount,InvoiceDate,payment_days,EstPaydate,client_status)VALUES(uuid_short(),'{$createUser}','{$cash_pool_code}','{$vendorcode}','{$invoice_no}',$invoice_amount,'{$invoice_date}',{$payment_days},'{$estPaydate}',{$client_status});";    
                 }
             } 
             if (count($sql_arr) > 0) {
@@ -120,7 +121,7 @@ class Sync extends BaseController {
                 if ($this->Until->exeSql($sql_arr)) {
                     echo json_encode(array('code'=>1,'mgs'=>'success'));
                 } else {
-                    echo json_encode(array('code'=>-1,'msg'=>'exe sql fails'));
+                    echo json_encode(array('code'=>-1,'msg'=>'fails'));
                 }
             } else {
                 echo json_encode(array('code'=>-1,'msg'=>'no sql'));
@@ -136,7 +137,7 @@ class Sync extends BaseController {
             $sql_arr  = array();
             foreach($this->post as $post) {
                 if (! array_key_exists(trim($post['book_code']),$this->book)) {
-                    echo json_encode(array('code'=>-1,'msg'=>'pool_code:' + $post['book_code'] + ' not exist!'));
+                    echo json_encode(array('code'=>-1,'msg'=>'book_code:' + $post['book_code'] + ' not exist!'));
                     return;
                 }
                 $cash_pool_code = $this->book[trim($post['book_code'])]['CashpoolCode'];
