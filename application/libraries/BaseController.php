@@ -18,7 +18,7 @@ abstract class BaseController extends CI_Controller {
         $this->get  = $this->input->get();
         $this->post = null;
         $data       = $this->getData();
-        if (count($data['post']) > 0) {
+        if (isset($data['post']) && count($data['post']) > 0) {
             $this->post = $data['post'];
             $this->load->model('CustomerCashpool');
             //$this->CustomerCashpool.php->init($this->profile)
