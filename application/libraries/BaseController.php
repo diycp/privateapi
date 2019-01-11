@@ -16,12 +16,13 @@ abstract class BaseController extends CI_Controller {
    
     public function init() {
         $this->get  = $this->input->get();
-        $this->post = null;
-        $data       = $this->getData();
-        if (isset($data['post']) && count($data['post']) > 0) {
-            $this->post = $data['post'];
+        $this->post = $this->getData();
+        if (! isset($this->post)) {
+            $this->post = array();
+        }
+        if (isset($this->post['post']) && count($this->post['post']) > 0) {
+            $this->post = $this->post['post'];
             $this->load->model('CustomerCashpool');
-            //$this->CustomerCashpool.php->init($this->profile)
             $keys       = array_column($this->post, 'book_code');
             $this->book = $this->CustomerCashpool->getBooks($keys);
         }
