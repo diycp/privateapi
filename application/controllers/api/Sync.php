@@ -105,15 +105,15 @@ class Sync extends BaseController {
                 $invoice_no     = $post['invoice_no'];
                 $invoice_amount = $post['invoice_amount'];
                 $invoice_date   = $post['invoice_date']; 
-                $estPaydate     = $post['estPaydate'];
+                $estPay_date    = $post['estPay_date'];
                 //$invoce_status  = 1;//default 1
                 $client_status  = $post['status'];
                 //$isincluded     = 1;//default 1
                 if (isset($post['id'])) {
                     $id = $post['id'];
-                    $sql_arr[] = "UPDATE Customer_Payments SET CashpoolCode='{$cash_pool_code}',Vendorcode='{$vendorcode}',InvoiceNo='{$invoice_no}',InvoiceAmount={$invoice_amount},InvoiceDate='{$invoice_date}',EstPaydate='{$estPaydate}',client_status={$client_status} WHERE Id={$id}";
+                    $sql_arr[] = "UPDATE Customer_Payments SET CashpoolCode='{$cash_pool_code}',Vendorcode='{$vendorcode}',InvoiceNo='{$invoice_no}',InvoiceAmount={$invoice_amount},InvoiceDate='{$invoice_date}',EstPaydate='{$estPay_date}',client_status={$client_status} WHERE Id={$id}";
                 } else {
-                    $sql_arr[] = "INSERT INTO Customer_Payments(Id,CreateUser,CashpoolCode,Vendorcode,InvoiceNo,InvoiceAmount,InvoiceDate,EstPaydate,client_status)VALUES(uuid_short(),'{$createUser}','{$cash_pool_code}','{$vendorcode}','{$invoice_no}',$invoice_amount,'{$invoice_date}','{$estPaydate}',{$client_status});";    
+                    $sql_arr[] = "INSERT INTO Customer_Payments(Id,CreateUser,CashpoolCode,Vendorcode,InvoiceNo,InvoiceAmount,InvoiceDate,EstPaydate,client_status)VALUES(uuid_short(),'{$createUser}','{$cash_pool_code}','{$vendorcode}','{$invoice_no}',$invoice_amount,'{$invoice_date}','{$estPay_date}',{$client_status});";    
                 }
             } 
             if (count($sql_arr) > 0) {
